@@ -1,93 +1,70 @@
-# Encomendas — o que falta fazer
+# Encomendas — estado e utilização
 
-São quatro passos. Só é preciso fazê-los uma vez.
+**Endereço:** https://groupmultifund.github.io/encomendas/
 
----
-
-## 1. Criar o repositório no GitHub
-
-Em github.com, com a conta **GroupMultiFund**:
-
-1. Botão **New** (novo repositório)
-2. Nome: `encomendas`
-3. Marcar **Add a README file**
-4. **Create repository**
-
-Diga-me quando estiver criado — eu carrego lá todos os ficheiros.
-
-> Para o endereço funcionar sem custos, o repositório tem de ser **público**, tal como o
-> `inventario`. Isso não expõe nada de sensível: as credenciais estão cifradas e o destinatário
-> está fixo do lado do Google. Se preferir mantê-lo privado, é possível, mas o GitHub cobra
-> cerca de 4 USD/mês pelo plano Pro.
-
-Depois de eu carregar os ficheiros: **Settings → Pages → Source: Deploy from a branch →
-main / (root) → Save**. Passados 1 a 2 minutos o endereço fica ativo em
-`https://groupmultifund.github.io/encomendas/`.
+Tudo está instalado e a funcionar. Este documento fica como referência.
 
 ---
 
-## 2. Criar o script que envia os emails
+## O que está montado
 
-Este passo é igual ao que já fez no inventário.
+| Peça | Onde |
+|---|---|
+| Aplicação | GitHub Pages, a partir deste repositório |
+| Envio dos emails | Apps Script "Encomendas Sulfrio - envio de email", na conta logistica@groupmultifund.pt |
+| Token do script | Apps Script → Definições do projeto → Propriedades do script → `TOKEN` |
+| Credenciais de acesso | `cofre.js`, cifrado com a password |
 
-1. Ir a **script.google.com** com a conta `logistica@groupmultifund.pt` → **Novo projeto**
-2. Apagar o que lá estiver e colar o conteúdo de **`Codigo.gs`**
-3. No topo do ficheiro, confirmar o destinatário:
+O email sai de `logistica@groupmultifund.pt` para `logistica@sulfrio.pt`. O destinatário está
+fixo no script, do lado do Google: a aplicação não o pode alterar.
 
-   ```js
-   const DESTINO = 'logistica@sulfrio.pt';
-   ```
+## Instalar no telemóvel
 
-   Se quiser cópia interna de todas as encomendas, preencher também `CC`.
+- **Android:** abrir o endereço no Chrome → menu **⋮** → *Adicionar ao ecrã principal*
+  (ou o botão *Instalar no ecrã principal* dentro da própria app)
+- **iPhone:** abrir no Safari → **Partilhar** → *Adicionar ao Ecrã Principal*
 
-4. **Implementar → Nova implementação → Aplicação Web**
-   - Executar como: **Eu (logistica@groupmultifund.pt)**
-   - Quem tem acesso: **Qualquer pessoa**
-5. Autorizar quando o Google pedir (vai aparecer um aviso de "app não verificada" —
-   *Avançadas → Aceder ao projeto*, é o seu próprio script)
-6. **Copiar o URL da aplicação web** — termina em `/exec`
+Fica com ícone próprio e abre em ecrã inteiro. Ao entrar pede utilizador e password; marcando
+*Manter sessão iniciada*, só volta a pedir se terminar sessão em ⚙ ou limpar os dados do browser.
+Se limpar tudo no telemóvel, nada se perde — basta abrir o endereço outra vez.
 
-> Vantagem face ao EmailJS: o email sai mesmo da vossa conta Google, sem serviços terceiros,
-> sem limite de 200/mês e sem qualquer credencial dentro da página.
+## Como usar
 
----
+- A **referência** (`ENC-20260916-01`) é automática e segue a data escolhida.
+- **+ Adicionar produto** acrescenta linhas; **−/+** ajustam a quantidade.
+- Os produtos já usados aparecem como sugestões; o tamanho é texto livre.
+- **Ver email antes de enviar** mostra a mensagem tal como sai.
+- Em **Últimas encomendas**, *Repetir* copia os produtos de uma encomenda anterior.
+- O botão **✉** abre a app de email com a encomenda preenchida — alternativa que funciona sempre.
+- Em ⚙ há **Email de teste** (envia para a própria caixa, nunca para o fornecedor) e
+  **Terminar sessão**.
 
-## 3. Gerar o cofre (utilizador e password)
+## Segurança
 
-1. Abrir **`gerador.html`** (no computador, com duplo clique, ou pelo endereço depois de publicado)
-2. Escolher **utilizador** e **password** de acesso à aplicação
-3. Carregar em **Gerar token novo** e **copiar o token**
-4. Voltar ao Google Apps Script e substituir `'COLE-AQUI-O-TOKEN'` por esse token.
-   Guardar e **implementar de novo** (Implementar → Gerir implementações → editar → Nova versão)
-5. No gerador, colar o **URL do script** (o que termina em `/exec`)
-6. **Gerar bloco cifrado** → **Verificar** → **Copiar**
-7. Enviar-me o bloco copiado
+- Login com utilizador e password no arranque.
+- O endereço do script e o token estão cifrados em `cofre.js` (AES-GCM 256, chave derivada do
+  utilizador + password por PBKDF2-SHA256, 310 000 iterações). Não são legíveis no código.
+- Histórico e sugestões guardados no telemóvel também ficam cifrados com a mesma chave.
+- A password não está guardada em lado nenhum. Se a perder, gera-se um cofre novo.
 
-O bloco é ilegível sem a sua password, por isso pode ser enviado sem preocupação.
-**A password não deve ser enviada a ninguém, nem a mim.**
+## Trocar a password (ou o utilizador)
 
----
+1. Abrir `gerador.html` no endereço acima
+2. Escrever o novo utilizador/password, colar o **token** e o **endereço do script** (os mesmos)
+3. **Gerar bloco cifrado** → **Copiar**
+4. Substituir o conteúdo do ficheiro `cofre.js` neste repositório por esse bloco
 
-## 4. Instalar no telemóvel
+Os telemóveis apanham a alteração na abertura seguinte.
 
-Com o endereço já ativo:
+## Trocar o token do script
 
-- **Android:** abrir o link no Chrome → menu **⋮** → **Adicionar ao ecrã principal**
-  (ou o botão *Instalar no ecrã principal* que aparece dentro da app)
-- **iPhone:** abrir o link no Safari → **Partilhar** → **Adicionar ao Ecrã Principal**
+1. No gerador, **Gerar token novo** e copiar
+2. Apps Script → Definições do projeto → Propriedades do script → editar `TOKEN` → guardar
+3. Gerar um cofre novo com esse token e substituir o `cofre.js`
 
-Fica com ícone próprio e abre em ecrã inteiro. Ao entrar pede utilizador e password; se marcar
-*Manter sessão iniciada*, só volta a pedir se terminar sessão ou limpar os dados do browser.
+Não é preciso reimplementar o script — a propriedade tem efeito imediato.
 
-Se um dia limpar tudo no telemóvel, a aplicação não se perde: basta abrir o link outra vez.
+## Atualizar a aplicação
 
----
-
-## Resumo de quem sabe o quê
-
-| | Onde está | Quem consegue ler |
-|---|---|---|
-| Password de acesso | Em lado nenhum — só na sua cabeça | Só o senhor |
-| Token e endereço do script | Cifrados dentro da app | Quem souber a password |
-| Destinatário das encomendas | Fixo no script Google | Só quem entrar na conta Google |
-| Histórico de encomendas | Cifrado, no próprio telemóvel | Quem souber a password |
+Substituir os ficheiros neste repositório. Os telemóveis apanham a versão nova na abertura
+seguinte e mostram o aviso "Nova versão disponível".
