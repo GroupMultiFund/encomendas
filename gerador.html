@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#075189">
+<meta name="robots" content="noindex, nofollow">
+<title>Gerador do cofre — Encomendas</title>
+<style>
+:root{--bg:#eef3f8;--ink:#0f2537;--muted:#5b7288;--line:#d8e3ee;--brand:#0b6bb5;--brand-dark:#075189;
+  --brand-soft:#e6f1fa;--ok:#0f8a5f;--ok-soft:#e4f5ee;--err:#c0392b;--err-soft:#fbeae8;--warn:#a76b00;--warn-soft:#fdf3e0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
+.wrap{max-width:620px;margin:0 auto;padding:22px 14px 60px}
+header{background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;border-radius:14px;
+  padding:20px;margin-bottom:16px}
+header h1{margin:0;font-size:19px}
+header p{margin:6px 0 0;font-size:13.5px;opacity:.88}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;
+  box-shadow:0 1px 2px rgba(15,37,55,.06),0 6px 18px rgba(15,37,55,.07)}
+.card h2{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+input,textarea{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:16px;
+  font-family:inherit;color:var(--ink);background:#fff}
+input:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.campo{margin-bottom:13px}
+.btn{border:none;border-radius:11px;padding:14px 18px;font-size:15.5px;font-weight:800;cursor:pointer;
+  font-family:inherit;width:100%;margin-top:6px}
+.btn-main{background:var(--brand);color:#fff}
+.btn-main:hover{background:var(--brand-dark)}
+.btn-main[disabled]{background:#9db6c9}
+.btn-alt{background:#fff;color:var(--brand-dark);border:1.5px solid var(--line)}
+.msg{padding:12px 14px;border-radius:10px;font-size:14px;margin-top:12px;display:none;font-weight:600}
+.msg.show{display:block}
+.msg.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #b9e3d1}
+.msg.err{background:var(--err-soft);color:var(--err);border:1px solid #f0c3bd}
+.msg.warn{background:var(--warn-soft);color:var(--warn);border:1px solid #f0dcae}
+.nota{background:var(--warn-soft);border:1px solid #f0dcae;color:var(--warn);border-radius:11px;
+  padding:14px 16px;font-size:13.5px;margin-bottom:16px}
+textarea#saida{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+  min-height:190px;background:#0f2537;color:#dbe9f4;border-color:#0f2537}
+.forca{height:6px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden}
+.forca div{height:100%;width:0;transition:width .2s,background .2s}
+.forca-txt{font-size:12px;color:var(--muted);margin-top:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Gerador do cofre</h1>
+  <p>Cifra a ligação de envio com a sua password. Nada do que escrever aqui sai deste
+     telemóvel/computador — o cálculo é todo feito no browser.</p>
+</header>
+
+<div class="nota">
+  <b>Guarde bem a password.</b> Não existe recuperação: se a perder, é preciso gerar um cofre novo
+  e voltar a publicá-lo na aplicação.
+</div>
+
+<div class="card">
+  <h2>Credenciais de acesso à aplicação</h2>
+  <div class="campo">
+    <label for="gUser">Utilizador</label>
+    <input id="gUser" type="text" placeholder="Ex.: logistica" autocapitalize="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="campo">
+    <label for="gPass">Password</label>
+    <input id="gPass" type="password" oninput="medir()">
+    <div class="forca"><div id="barra"></div></div>
+    <div class="forca-txt" id="forcaTxt">Use pelo menos 12 caracteres, com maiúsculas, números e símbolos.</div>
+  </div>
+  <div class="campo">
+    <label for="gPass2">Repetir password</label>
+    <input id="gPass2" type="password">
+  </div>
+</div>
+
+<div class="card">
+  <h2>Token do script</h2>
+  <p style="font-size:13.5px;color:var(--muted);margin:0 0 12px">
+    Gere um token, cole-o no <b>Codigo.gs</b> do Google Apps Script e deixe-o também aqui.
+    É ele que impede que outra pessoa use o script.
+  </p>
+  <div class="campo">
+    <label for="gToken">Token</label>
+    <input id="gToken" type="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+  </div>
+  <button class="btn btn-alt" onclick="gerarToken()">Gerar token novo</button>
+  <button class="btn btn-alt" onclick="copiarToken()">Copiar token</button>
+</div>
+
+<div class="card">
+  <h2>Ligação de envio</h2>
+  <div class="campo"><label for="gUrl">Endereço da aplicação web (Apps Script)</label>
+    <input id="gUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+  <div class="campo"><label for="gPara">Email do fornecedor (apenas informativo na app)</label>
+    <input id="gPara" type="email" value="logistica@sulfrio.pt" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+  <div class="campo"><label for="gCc">Cópia para (opcional, apenas informativo)</label>
+    <input id="gCc" type="text" placeholder="Ex.: compras@groupmultifund.pt" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+
+  <button class="btn btn-main" id="btnGerar" onclick="gerar()">Gerar bloco cifrado</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<div class="card" id="cardSaida" style="display:none">
+  <h2>Bloco a enviar</h2>
+  <p style="font-size:13.5px;color:var(--muted);margin:0 0 12px">
+    Este bloco é ilegível sem a password. Pode enviá-lo com segurança para ser colocado na aplicação.
+  </p>
+  <textarea id="saida" readonly></textarea>
+  <button class="btn btn-alt" onclick="copiar()">Copiar</button>
+  <button class="btn btn-alt" onclick="verificar()">Verificar (decifrar de volta)</button>
+  <div class="msg" id="msgVer"></div>
+</div>
+
+</div>
+
+<script>
+const ITER = 310000;
+const enc = new TextEncoder(), dec = new TextDecoder();
+function b64(buf){ let s=''; new Uint8Array(buf).forEach(b=>s+=String.fromCharCode(b)); return btoa(s); }
+function deb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+
+async function derivarChave(user, pass, salt, iter){
+  const base = await crypto.subtle.importKey('raw',
+    enc.encode(String(user).trim().toLowerCase()+'\n'+String(pass)), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
+}
+
+function medir(){
+  const p=document.getElementById('gPass').value;
+  let s=0;
+  if(p.length>=8) s++;
+  if(p.length>=12) s++;
+  if(/[A-Z]/.test(p)&&/[a-z]/.test(p)) s++;
+  if(/[0-9]/.test(p)) s++;
+  if(/[^A-Za-z0-9]/.test(p)) s++;
+  const cores=['#c0392b','#c0392b','#a76b00','#a76b00','#0f8a5f','#0f8a5f'];
+  const txt=['Muito fraca','Muito fraca','Fraca','Razoável','Boa','Muito boa'];
+  const b=document.getElementById('barra');
+  b.style.width=(s/5*100)+'%'; b.style.background=cores[s];
+  document.getElementById('forcaTxt').textContent = p ? 'Força: '+txt[s] :
+    'Use pelo menos 12 caracteres, com maiúsculas, números e símbolos.';
+}
+
+function aviso(id,t,tipo){ const m=document.getElementById(id); m.className='msg show '+tipo; m.innerHTML=t; }
+
+function gerarToken(){
+  const bytes=crypto.getRandomValues(new Uint8Array(24));
+  let s=''; bytes.forEach(b=>s+='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'[b%57]);
+  document.getElementById('gToken').value=s;
+  aviso('msg','✓ Token gerado. Cole-o no Codigo.gs, no lugar de COLE-AQUI-O-TOKEN.','ok');
+}
+function copiarToken(){
+  const t=document.getElementById('gToken').value;
+  if(!t) return;
+  navigator.clipboard.writeText(t).then(()=>aviso('msg','✓ Token copiado.','ok')).catch(()=>{});
+}
+
+let ULTIMO=null;
+
+async function gerar(){
+  const v = id => document.getElementById(id).value.trim();
+  const user=v('gUser'), pass=document.getElementById('gPass').value,
+        pass2=document.getElementById('gPass2').value;
+
+  if(!user || !pass)            return aviso('msg','Preencha o utilizador e a password.','err');
+  if(pass!==pass2)              return aviso('msg','As duas passwords não coincidem.','err');
+  if(pass.length<8)             return aviso('msg','A password deve ter pelo menos 8 caracteres.','err');
+  if(!v('gUrl') || !/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(v('gUrl')))
+                                return aviso('msg','Endereço do script inválido — deve terminar em /exec.','err');
+  if(!v('gToken'))              return aviso('msg','Gere um token e cole-o também no script.','err');
+  if(!crypto.subtle)            return aviso('msg','O browser não permite cifrar nesta página. Abra-a por https.','err');
+
+  const btn=document.getElementById('btnGerar');
+  btn.disabled=true; btn.textContent='A cifrar…';
+  aviso('msg','A cifrar — pode demorar um segundo.','warn');
+  await new Promise(r=>setTimeout(r,40));
+
+  try{
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const chave= await derivarChave(user, pass, salt, ITER);
+    const conf = { url:v('gUrl'), token:v('gToken'),
+                   para:v('gPara')||'logistica@sulfrio.pt', cc:v('gCc') };
+    const ct   = await crypto.subtle.encrypt({name:'AES-GCM', iv}, chave, enc.encode(JSON.stringify(conf)));
+
+    ULTIMO = { salt:b64(salt), iv:b64(iv), dados:b64(ct) };
+
+    document.getElementById('saida').value =
+`const COFRE = {
+  v    : 1,
+  iter : ${ITER},
+  salt : '${ULTIMO.salt}',
+  iv   : '${ULTIMO.iv}',
+  dados: '${ULTIMO.dados}'
+};`;
+    document.getElementById('cardSaida').style.display='block';
+    aviso('msg','✓ Bloco gerado. Copie-o abaixo.','ok');
+    document.getElementById('cardSaida').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    aviso('msg','Falhou: '+e.message,'err');
+  }finally{
+    btn.disabled=false; btn.textContent='Gerar bloco cifrado';
+  }
+}
+
+function copiar(){
+  const t=document.getElementById('saida');
+  t.select(); t.setSelectionRange(0,99999);
+  navigator.clipboard.writeText(t.value)
+    .then(()=>aviso('msgVer','✓ Copiado.','ok'))
+    .catch(()=>{ document.execCommand('copy'); aviso('msgVer','✓ Copiado.','ok'); });
+}
+
+async function verificar(){
+  if(!ULTIMO) return;
+  const user=document.getElementById('gUser').value, pass=document.getElementById('gPass').value;
+  try{
+    const chave=await derivarChave(user,pass,deb64(ULTIMO.salt),ITER);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:deb64(ULTIMO.iv)},chave,deb64(ULTIMO.dados));
+    const o=JSON.parse(dec.decode(pt));
+    aviso('msgVer','✓ Verificado: o bloco decifra corretamente, aponta para o script <b>'+
+      o.url.slice(0,46)+'…</b> e mostra o destinatário <b>'+o.para+'</b>.','ok');
+  }catch(e){
+    aviso('msgVer','✗ Não decifrou — algo está errado.','err');
+  }
+}
+</script>
+</body>
+</html>

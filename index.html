@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#075189">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Encomendas">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Encomendas</title>
+<style>
+:root{
+  --bg:#eef3f8; --card:#fff; --ink:#0f2537; --muted:#5b7288; --line:#d8e3ee;
+  --brand:#0b6bb5; --brand-dark:#075189; --brand-soft:#e6f1fa;
+  --ok:#0f8a5f; --ok-soft:#e4f5ee; --err:#c0392b; --err-soft:#fbeae8;
+  --warn:#a76b00; --warn-soft:#fdf3e0;
+  --r:14px; --shadow:0 1px 2px rgba(15,37,55,.06), 0 6px 18px rgba(15,37,55,.07);
+  --safe:env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased;font-size:16px}
+body.trancado{overflow:hidden}
+#app{padding-bottom:calc(96px + var(--safe))}
+#app[hidden]{display:none}
+.wrap{max-width:640px;margin:0 auto;padding:0 12px 12px}
+
+/* ---------- Ecrã de entrada ---------- */
+#ecraLogin{
+  position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#075189,#0b6bb5 60%,#1183d8);padding:24px 18px calc(24px + var(--safe));
+}
+#ecraLogin.show{display:flex}
+.login-card{background:#fff;border-radius:20px;width:100%;max-width:380px;padding:26px 22px;
+  box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.login-logo{width:64px;height:64px;display:block;margin:0 auto 14px;border-radius:16px}
+.login-card h1{margin:0 0 4px;font-size:19px;text-align:center}
+.login-card .sub{margin:0 0 20px;font-size:13px;color:var(--muted);text-align:center}
+.login-card .campo{margin-bottom:13px}
+.check{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin:14px 0 4px}
+.check input{width:20px;height:20px;flex:none;accent-color:var(--brand)}
+#ecraLogin .rodape{color:rgba(255,255,255,.75);font-size:12px;margin-top:18px;text-align:center;max-width:380px}
+
+/* ---------- Topo ---------- */
+header.top{background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px rgba(7,81,137,.25)}
+header.top h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.2px}
+header.top p{margin:2px 0 0;font-size:12px;opacity:.85}
+.btn-cfg{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);color:#fff;
+  width:42px;height:42px;border-radius:11px;font-size:19px;cursor:pointer;flex:none}
+.btn-cfg:active{background:rgba(255,255,255,.3)}
+
+/* ---------- Cartões ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:12px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+.topo-info{display:flex;gap:12px}
+.topo-info>div{flex:1}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+input,textarea{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;
+  font-size:16px;font-family:inherit;color:var(--ink);background:#fff;-webkit-appearance:none}
+input:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+input[readonly]{background:#f3f7fb;color:var(--muted);font-weight:700}
+textarea{resize:vertical;min-height:76px}
+.hint{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+
+/* ---------- Produtos ---------- */
+.linha{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:#fbfdff}
+.linha-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.linha-n{font-size:12px;font-weight:800;color:var(--brand);letter-spacing:.8px;text-transform:uppercase}
+.del{border:none;background:transparent;color:var(--err);font-size:14px;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:8px}
+.del:active{background:var(--err-soft)}
+.del[disabled]{opacity:.25}
+.linha .campo{margin-bottom:10px}
+.linha .campo:last-child{margin-bottom:0}
+.dupla{display:flex;gap:10px}
+.dupla .campo{flex:1;margin-bottom:0}
+.qtd-box{display:flex;align-items:stretch;border:1.5px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}
+.qtd-box input{border:none;border-radius:0;text-align:center;font-weight:700;font-size:17px;padding:13px 0}
+.qtd-box input:focus{box-shadow:none}
+.qtd-btn{border:none;background:#f3f7fb;color:var(--brand-dark);width:46px;font-size:22px;font-weight:700;cursor:pointer;line-height:1}
+.qtd-btn:active{background:var(--brand-soft)}
+.add{border:1.5px dashed var(--brand);background:var(--brand-soft);color:var(--brand-dark);padding:14px;
+  border-radius:12px;font-size:15.5px;font-weight:700;cursor:pointer;width:100%;font-family:inherit}
+.add:active{background:#d5e8f7}
+.resumo{display:flex;justify-content:space-between;background:var(--brand-soft);border-radius:11px;
+  padding:12px 14px;font-size:14px;font-weight:700;color:var(--brand-dark);margin-top:12px}
+
+/* ---------- Pré-visualização ---------- */
+details.prev-wrap summary{list-style:none;cursor:pointer;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+details.prev-wrap summary::-webkit-details-marker{display:none}
+details.prev-wrap summary::after{content:'▾';font-size:14px}
+details.prev-wrap[open] summary::after{content:'▴'}
+pre.prev{background:#0f2537;color:#dbe9f4;padding:14px;border-radius:11px;font-size:12px;overflow-x:auto;
+  white-space:pre-wrap;word-break:break-word;margin:12px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ---------- Avisos ---------- */
+.msg{padding:12px 14px;border-radius:11px;font-size:14px;margin-top:12px;display:none;font-weight:600}
+.msg.show{display:block}
+.msg.ok{background:var(--ok-soft);color:var(--ok);border:1px solid #b9e3d1}
+.msg.err{background:var(--err-soft);color:var(--err);border:1px solid #f0c3bd}
+.msg.warn{background:var(--warn-soft);color:var(--warn);border:1px solid #f0dcae}
+
+/* ---------- Barra fixa ---------- */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 12px calc(10px + var(--safe))}
+.barra .inner{max-width:640px;margin:0 auto;display:flex;gap:10px;width:100%}
+.btn{border:none;border-radius:12px;padding:15px 16px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
+.btn-main{background:var(--brand);color:#fff;flex:1}
+.btn-main:active{background:var(--brand-dark)}
+.btn-main[disabled]{background:#9db6c9}
+.btn-alt{background:#fff;color:var(--brand-dark);border:1.5px solid var(--line);flex:none;padding:15px 18px}
+.btn-alt:active{background:var(--brand-soft)}
+.btn-perigo{background:#fff;color:var(--err);border:1.5px solid #f0c3bd}
+
+/* ---------- Histórico ---------- */
+.hist-item{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
+.hist-item:last-child{border-bottom:none}
+.hist-item .dt{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.rep{background:var(--brand-soft);color:var(--brand-dark);border:none;border-radius:8px;padding:6px 11px;
+  font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.vazio{color:var(--muted);font-size:14px;font-style:italic;margin:0}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(15,37,55,.6);display:none;align-items:flex-end;justify-content:center;z-index:60}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:640px;padding:20px 16px calc(20px + var(--safe));
+  max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal h3{margin:0 0 4px;font-size:18px}
+.modal .sub{margin:0 0 16px;font-size:13.5px;color:var(--muted)}
+.modal .campo{margin-bottom:13px}
+.passos{background:var(--brand-soft);border-radius:11px;padding:14px 16px 14px 32px;font-size:13.5px;color:var(--brand-dark);margin:0 0 16px}
+.passos li{margin-bottom:6px}
+.modal-acoes{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.modal-acoes .btn{width:100%}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.6px;vertical-align:middle}
+.badge.on{background:var(--ok-soft);color:var(--ok)}
+.badge.off{background:var(--warn-soft);color:var(--warn)}
+.puxador{width:38px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 14px}
+@media(min-width:560px){
+  .overlay{align-items:center}
+  .modal{border-radius:18px;margin:16px;padding:24px}
+  .puxador{display:none}
+}
+</style>
+</head>
+<body class="trancado">
+
+<!-- ═══════════════ ECRÃ DE ENTRADA ═══════════════ -->
+<div id="ecraLogin">
+  <form class="login-card" onsubmit="entrar(event)">
+    <img src="icon.svg" alt="" class="login-logo">
+    <h1>Encomendas</h1>
+    <p class="sub">Aplicação reservada. Introduza as suas credenciais.</p>
+
+    <div class="campo">
+      <label for="lUser">Utilizador</label>
+      <input id="lUser" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div class="campo">
+      <label for="lPass">Password</label>
+      <input id="lPass" type="password" autocomplete="current-password" required>
+    </div>
+
+    <label class="check">
+      <input id="lManter" type="checkbox">
+      Manter sessão iniciada neste telemóvel
+    </label>
+
+    <div class="msg" id="msgLogin"></div>
+
+    <div class="modal-acoes">
+      <button class="btn btn-main" id="btnEntrar" type="submit">Entrar</button>
+    </div>
+  </form>
+  <p class="rodape">As credenciais de envio estão cifradas. Sem a password correta não é possível
+    recuperá-las nem enviar encomendas.</p>
+</div>
+
+<!-- ═══════════════ APLICAÇÃO ═══════════════ -->
+<div id="app" hidden>
+
+  <header class="top">
+    <div>
+      <h1>Encomenda Sulfrio</h1>
+      <p id="subTopo">para logistica@sulfrio.pt</p>
+    </div>
+    <button class="btn-cfg" onclick="abrirConfig()" aria-label="Definições">⚙</button>
+  </header>
+
+  <div class="wrap">
+
+    <div id="cardAviso" style="display:none">
+      <div class="msg warn show">
+        <b>Envio automático por configurar.</b> Toque em ⚙ para introduzir os códigos de envio.
+        Até lá use o botão ✉ para enviar pela app de email.
+      </div>
+    </div>
+
+    <button class="add" id="btnInstalar" style="display:none;margin-top:12px" onclick="instalar()">
+      ⤓ Instalar no ecrã principal
+    </button>
+
+    <div class="card">
+      <div class="topo-info">
+        <div>
+          <label for="fRef">Referência</label>
+          <input id="fRef" type="text" readonly>
+        </div>
+        <div>
+          <label for="fData">Data</label>
+          <input id="fData" type="date">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Produtos</h2>
+      <div id="linhas"></div>
+      <button class="add" onclick="addLinha()">+ Adicionar produto</button>
+      <datalist id="produtos"></datalist>
+      <div class="resumo">
+        <span id="rLinhas">0 produtos</span>
+        <span id="rUnid">0 unidades</span>
+      </div>
+      <p class="hint">Os produtos que for usando ficam guardados como sugestões. O tamanho é escrito livremente.</p>
+    </div>
+
+    <div class="card">
+      <h2>Observações</h2>
+      <textarea id="fObs" placeholder="Notas para o fornecedor (opcional)"></textarea>
+    </div>
+
+    <div class="card">
+      <details class="prev-wrap">
+        <summary>Ver email antes de enviar</summary>
+        <pre class="prev" id="prev">—</pre>
+      </details>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Últimas encomendas</h2>
+      <div id="hist"></div>
+    </div>
+
+  </div>
+
+  <div class="barra">
+    <div class="inner">
+      <button class="btn btn-main" id="btnEnviar" onclick="enviar()">Enviar encomenda</button>
+      <button class="btn btn-alt" onclick="abrirNoEmail()" aria-label="Abrir na app de email" title="Abrir na app de email">✉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DEFINIÇÕES ═══════════════ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="puxador"></div>
+    <h3>Definições &nbsp;<span class="badge off" id="badgeCfg">por configurar</span></h3>
+
+    <div class="msg ok show" id="notaCofre" style="display:none;margin:0 0 16px">
+      🔒 Ligação de envio cifrada com a sua password e destinatário fixo do lado do servidor.
+      Nada disto é legível no código da página.
+    </div>
+
+    <div id="blocoEnvio">
+      <p class="sub">As encomendas são enviadas por um script Google da empresa, a partir de
+        <b>logistica@groupmultifund.pt</b>.</p>
+      <div class="campo"><label for="cUrl">Endereço do script</label>
+        <input id="cUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="campo"><label for="cToken">Token</label>
+        <input id="cToken" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="campo"><label for="cPara">Email do fornecedor</label>
+        <input id="cPara" type="email" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="campo"><label for="cCc">Cópia para (opcional)</label>
+        <input id="cCc" type="text" placeholder="Ex.: compras@groupmultifund.pt" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    </div>
+
+    <div id="blocoDestino" style="display:none">
+      <div class="campo"><label>Email do fornecedor</label>
+        <input id="cParaRO" type="text" readonly></div>
+    </div>
+
+    <div class="msg" id="msgCfg"></div>
+
+    <div class="modal-acoes">
+      <button class="btn btn-main" id="btnGuardarCfg" onclick="guardarConfig()">Guardar</button>
+      <button class="btn btn-alt" onclick="testarConfig()">Email de teste</button>
+      <button class="btn btn-perigo" id="btnSair" style="display:none" onclick="sair()">Terminar sessão</button>
+      <button class="btn btn-alt" onclick="fecharConfig()">Fechar</button>
+    </div>
+    <p class="sub" style="margin:14px 0 0;text-align:center">Versão <span id="verApp"></span></p>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Encomendas — Sábio Crescimento / Group Multifund
+
+   COFRE: o endereço do script de envio, o seu token e o destinatário
+   ficam aqui cifrados com AES-GCM 256. A chave é derivada do utilizador + password
+   com PBKDF2-SHA256. Nem a password nem os códigos existem em claro
+   nesta página — sem as credenciais corretas o bloco é indecifrável.
+
+   Para gerar este bloco use a página "gerador.html" e cole aqui o
+   resultado. Nunca escreva a password neste ficheiro.
+   ═══════════════════════════════════════════════════════════════════════ */
+const COFRE = {
+  v    : 1,
+  iter : 310000,
+  salt : '',   // base64
+  iv   : '',   // base64
+  dados: ''    // base64 — {url, token, para, cc} cifrado
+};
+const TEM_COFRE = !!(COFRE.salt && COFRE.iv && COFRE.dados);
+
+const VERSAO    = '2026.09.16';
+const REMETENTE = 'logistica@groupmultifund.pt';
+const K_CHAVE   = 'sulfrio.chave';    // chave de sessão (se "manter ligado")
+const K_DADOS   = 'sulfrio.dados';    // dados locais (cifrados quando há cofre)
+const K_CFG     = 'sulfrio.config';   // só usado quando não há cofre
+
+let CHAVE = null;                     // CryptoKey em memória
+let cfg   = {url:'', token:'', para:'logistica@sulfrio.pt', cc:''};
+let DADOS = {contadores:{}, produtos:[], historico:[], rascunho:null};
+
+/* ─────────────── utilitários ─────────────── */
+const enc = new TextEncoder(), dec = new TextDecoder();
+function b64(buf){ let s=''; new Uint8Array(buf).forEach(b=>s+=String.fromCharCode(b)); return btoa(s); }
+function deb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function ler(k,f){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;} }
+function gravar(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+
+/* ─────────────── criptografia ─────────────── */
+async function derivarChave(user, pass, salt, iter){
+  const base = await crypto.subtle.importKey('raw',
+    enc.encode(String(user).trim().toLowerCase()+'\n'+String(pass)), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
+}
+async function cifrar(chave, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, chave, enc.encode(JSON.stringify(obj)));
+  return {iv:b64(iv), dados:b64(ct)};
+}
+async function decifrar(chave, ivB64, dadosB64){
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:deb64(ivB64)}, chave, deb64(dadosB64));
+  return JSON.parse(dec.decode(pt));
+}
+
+/* ─────────────── entrada ─────────────── */
+async function arrancar(){
+  document.getElementById('verApp').textContent = VERSAO;
+
+  if(!TEM_COFRE){                       // ainda sem cofre gerado
+    cfg = Object.assign(cfg, ler(K_CFG, {}));
+    DADOS = Object.assign(DADOS, ler(K_DADOS, {}));
+    abrirApp();
+    return;
+  }
+  if(!window.crypto || !crypto.subtle){  // precisa de ligação segura (https)
+    document.getElementById('ecraLogin').classList.add('show');
+    msgLogin('Esta aplicação tem de ser aberta pelo endereço https para poder decifrar as credenciais.','err');
+    return;
+  }
+  // sessão guardada neste telemóvel?
+  const guardada = localStorage.getItem(K_CHAVE);
+  if(guardada){
+    try{
+      const chave = await crypto.subtle.importKey('raw', deb64(guardada),
+        {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
+      cfg = Object.assign(cfg, await decifrar(chave, COFRE.iv, COFRE.dados));
+      CHAVE = chave;
+      await carregarDados();
+      abrirApp();
+      return;
+    }catch(e){ localStorage.removeItem(K_CHAVE); }
+  }
+  document.getElementById('ecraLogin').classList.add('show');
+  setTimeout(()=>document.getElementById('lUser').focus(), 250);
+}
+
+function msgLogin(t,tipo){
+  const m=document.getElementById('msgLogin');
+  m.className='msg show '+tipo; m.innerHTML=t;
+}
+
+async function entrar(ev){
+  ev && ev.preventDefault();
+  const u = document.getElementById('lUser').value;
+  const p = document.getElementById('lPass').value;
+  const b = document.getElementById('btnEntrar');
+  if(!u || !p) return;
+  b.disabled = true; b.textContent = 'A verificar…';
+  msgLogin('A decifrar as credenciais…','warn');
+  await new Promise(r=>setTimeout(r,40));
+  try{
+    const chave = await derivarChave(u, p, deb64(COFRE.salt), COFRE.iter);
+    const conf  = await decifrar(chave, COFRE.iv, COFRE.dados);   // falha se estiver errado
+    CHAVE = chave;
+    cfg = Object.assign(cfg, conf);
+    if(document.getElementById('lManter').checked){
+      const raw = await crypto.subtle.exportKey('raw', chave);
+      try{ localStorage.setItem(K_CHAVE, b64(raw)); }catch(e){}
+    }
+    document.getElementById('lPass').value='';
+    await carregarDados();
+    document.getElementById('ecraLogin').classList.remove('show');
+    abrirApp();
+  }catch(e){
+    await new Promise(r=>setTimeout(r,600));            // trava tentativas à força bruta
+    msgLogin('✗ Utilizador ou password incorretos.','err');
+    document.getElementById('lPass').value='';
+  }finally{
+    b.disabled=false; b.textContent='Entrar';
+  }
+}
+
+function sair(){
+  try{ localStorage.removeItem(K_CHAVE); }catch(e){}
+  CHAVE=null;
+  location.reload();
+}
+
+function abrirApp(){
+  document.body.classList.remove('trancado');
+  document.getElementById('app').hidden = false;
+  iniciar();
+}
+
+/* ─────────────── dados locais (cifrados) ─────────────── */
+async function carregarDados(){
+  const bruto = localStorage.getItem(K_DADOS);
+  if(!bruto) return;
+  try{
+    const o = JSON.parse(bruto);
+    DADOS = Object.assign(DADOS, o.iv ? await decifrar(CHAVE, o.iv, o.dados) : o);
+  }catch(e){ /* chave diferente ou dados corrompidos — recomeça limpo */ }
+}
+let tGuardar=null;
+function guardarDados(){
+  clearTimeout(tGuardar);
+  tGuardar = setTimeout(async()=>{
+    try{
+      if(CHAVE){ gravar(K_DADOS, await cifrar(CHAVE, DADOS)); }
+      else      { gravar(K_DADOS, DADOS); }
+    }catch(e){}
+  }, 400);
+}
+
+/* ─────────────── arranque da interface ─────────────── */
+function iniciar(){
+  const hoje = new Date();
+  document.getElementById('fData').value = iso(hoje);
+  atualizarRef();
+  document.getElementById('subTopo').textContent = 'para '+cfg.para;
+
+  desenharDatalists();
+  renderHistorico();
+  atualizarAvisoConfig();
+
+  if(DADOS.rascunho) restaurar(DADOS.rascunho); else addLinha();
+
+  document.getElementById('fObs').addEventListener('input', aoAlterar);
+  ['input','change'].forEach(ev =>
+    document.getElementById('fData').addEventListener(ev, ()=>{ atualizarRef(); aoAlterar(); }));
+  atualizarPreview();
+}
+
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function novaRef(dataIso){
+  const base='ENC-'+String(dataIso).replace(/-/g,'');
+  return base+'-'+String((DADOS.contadores[base]||0)+1).padStart(2,'0');
+}
+function atualizarRef(){
+  const v=document.getElementById('fData').value;
+  if(!v) return;
+  document.getElementById('fRef').value = novaRef(v);
+}
+function consumirRef(){
+  const base = document.getElementById('fRef').value.replace(/-\d+$/,'');
+  DADOS.contadores[base] = (DADOS.contadores[base]||0)+1;
+  guardarDados();
+}
+
+/* ─────────────── linhas ─────────────── */
+function addLinha(prod,tam,qtd){
+  const div=document.createElement('div');
+  div.className='linha';
+  div.innerHTML=
+   '<div class="linha-cab"><span class="linha-n"></span>'+
+     '<button class="del" type="button" onclick="delLinha(this)">Remover</button></div>'+
+   '<div class="campo"><label>Nome do produto</label>'+
+     '<input class="p-nome" type="text" list="produtos" placeholder="Ex.: Filete de pescada" value="'+esc(prod||'')+'"></div>'+
+   '<div class="dupla">'+
+     '<div class="campo"><label>Tamanho</label>'+
+       '<input class="p-tam" type="text" placeholder="Ex.: 5 kg" value="'+esc(tam||'')+'"></div>'+
+     '<div class="campo"><label>Quantidade</label>'+
+       '<div class="qtd-box">'+
+         '<button class="qtd-btn" type="button" onclick="passo(this,-1)" tabindex="-1">−</button>'+
+         '<input class="p-qtd" type="number" inputmode="numeric" min="1" step="1" value="'+(qtd||1)+'">'+
+         '<button class="qtd-btn" type="button" onclick="passo(this,1)" tabindex="-1">+</button>'+
+       '</div></div>'+
+   '</div>';
+  document.getElementById('linhas').appendChild(div);
+  div.querySelectorAll('input').forEach(el=>el.addEventListener('input',aoAlterar));
+  numerar(); aoAlterar();
+}
+function delLinha(btn){ btn.closest('.linha').remove(); numerar(); aoAlterar(); }
+function passo(btn,d){
+  const inp=btn.parentElement.querySelector('.p-qtd');
+  inp.value=Math.max(1,(parseInt(inp.value,10)||1)+d);
+  aoAlterar();
+}
+function numerar(){
+  const ls=document.querySelectorAll('.linha');
+  ls.forEach((l,i)=>{
+    l.querySelector('.linha-n').textContent='Produto '+(i+1);
+    l.querySelector('.del').disabled=(ls.length===1);
+  });
+}
+
+/* ─────────────── dados da encomenda ─────────────── */
+function recolher(){
+  const itens=[];
+  document.querySelectorAll('.linha').forEach(l=>{
+    const nome=l.querySelector('.p-nome').value.trim();
+    const tam=l.querySelector('.p-tam').value.trim();
+    const qtd=parseInt(l.querySelector('.p-qtd').value,10);
+    if(nome) itens.push({nome,tamanho:tam||'—',qtd:(qtd>0?qtd:1)});
+  });
+  return {
+    ref:document.getElementById('fRef').value,
+    data:document.getElementById('fData').value,
+    obs:document.getElementById('fObs').value.trim(),
+    itens
+  };
+}
+function dataPT(s){ if(!s)return'—'; const p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function assunto(d){ return 'Encomenda Sábio Crescimento - '+dataPT(d.data)+' - '+d.ref; }
+
+function corpoTexto(d){
+  const L=[];
+  L.push('Exmos. Senhores,');
+  L.push('');
+  L.push('Vimos por este meio efetuar a seguinte encomenda:');
+  L.push('');
+  L.push('Referência: '+d.ref);
+  L.push('Data......: '+dataPT(d.data));
+  L.push('');
+  L.push('PRODUTOS');
+  L.push('--------------------------------------------------');
+  d.itens.forEach((i,n)=>{
+    L.push((n+1)+'. '+i.nome);
+    L.push('   Tamanho: '+i.tamanho+'   |   Quantidade: '+i.qtd);
+  });
+  L.push('--------------------------------------------------');
+  L.push('Total: '+d.itens.length+' produto(s), '+d.itens.reduce((s,i)=>s+i.qtd,0)+' unidade(s)');
+  if(d.obs){ L.push(''); L.push('OBSERVAÇÕES'); L.push(d.obs); }
+  L.push('');
+  L.push('Com os melhores cumprimentos,');
+  L.push('Logística — Group Multifund');
+  L.push(REMETENTE);
+  return L.join('\n');
+}
+function corpoHTML(d){
+  let h='<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#0f2537;line-height:1.5">';
+  h+='<p>Exmos. Senhores,</p><p>Vimos por este meio efetuar a seguinte encomenda:</p>';
+  h+='<table cellpadding="6" style="border-collapse:collapse;font-size:13px;margin-bottom:14px">';
+  h+='<tr><td style="color:#5b7288">Referência</td><td><b>'+esc(d.ref)+'</b></td></tr>';
+  h+='<tr><td style="color:#5b7288">Data</td><td><b>'+dataPT(d.data)+'</b></td></tr></table>';
+  h+='<table cellpadding="8" style="border-collapse:collapse;width:100%;font-size:13px;border:1px solid #d8e3ee">';
+  h+='<tr style="background:#0b6bb5;color:#fff"><th align="left">Produto</th><th align="left">Tamanho</th><th align="right">Qtd.</th></tr>';
+  d.itens.forEach((i,n)=>{
+    h+='<tr style="background:'+(n%2?'#f6fafd':'#fff')+';border-top:1px solid #d8e3ee"><td>'+esc(i.nome)+
+       '</td><td>'+esc(i.tamanho)+'</td><td align="right"><b>'+i.qtd+'</b></td></tr>';
+  });
+  h+='<tr style="background:#e6f1fa"><td colspan="2" align="right"><b>Total de unidades</b></td><td align="right"><b>'+
+     d.itens.reduce((s,i)=>s+i.qtd,0)+'</b></td></tr></table>';
+  if(d.obs) h+='<p><b>Observações:</b><br>'+esc(d.obs).replace(/\n/g,'<br>')+'</p>';
+  h+='<p>Com os melhores cumprimentos,<br>Logística — Group Multifund<br>'+REMETENTE+'</p></div>';
+  return h;
+}
+
+/* ─────────────── pré-visualização ─────────────── */
+function aoAlterar(){
+  atualizarPreview();
+  DADOS.rascunho = recolher();
+  guardarDados();
+}
+function atualizarPreview(){
+  const d=recolher();
+  const un=d.itens.reduce((s,i)=>s+i.qtd,0);
+  document.getElementById('rLinhas').textContent=d.itens.length+(d.itens.length===1?' produto':' produtos');
+  document.getElementById('rUnid').textContent=un+(un===1?' unidade':' unidades');
+  document.getElementById('prev').textContent = d.itens.length
+    ? 'Para: '+cfg.para+'\nDe:   '+REMETENTE+(cfg.cc?'\nCc:   '+cfg.cc:'')+'\nAssunto: '+assunto(d)+'\n\n'+corpoTexto(d)
+    : 'Preencha pelo menos um produto.';
+}
+function validar(d){
+  if(!d.itens.length) return 'Indique pelo menos um produto.';
+  if(d.itens.every(i=>i.tamanho==='—')) return 'Indique o tamanho dos produtos.';
+  return null;
+}
+function aviso(t,tipo){
+  const m=document.getElementById('msg');
+  m.className='msg show '+tipo; m.innerHTML=t;
+  m.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ─────────────── envio ─────────────── */
+async function enviar(){
+  const d=recolher(), erro=validar(d);
+  if(erro){ aviso('⚠ '+erro,'err'); return; }
+  if(!cfg.url||!cfg.token){
+    aviso('⚙ Envio automático por configurar. Use o botão ✉ ou configure em ⚙.','warn');
+    abrirConfig(); return;
+  }
+  const btn=document.getElementById('btnEnviar');
+  btn.disabled=true; btn.textContent='A enviar…';
+  try{
+    await enviarPeloScript({
+      referencia: d.ref,
+      assunto: assunto(d),
+      texto: corpoTexto(d),
+      html: corpoHTML(d)
+    });
+    aviso('✓ Encomenda <b>'+esc(d.ref)+'</b> enviada para '+esc(cfg.para)+'.','ok');
+    guardarSugestoes(d); guardarHistorico(d); consumirRef();
+    DADOS.rascunho=null; guardarDados();
+    setTimeout(novaEncomenda,1400);
+  }catch(e){
+    aviso('✗ Não foi possível enviar: '+esc(e.message)+'<br>Pode usar o botão ✉ para enviar pela app de email.','err');
+  }finally{
+    btn.disabled=false; btn.textContent='Enviar encomenda';
+  }
+}
+/* Envia através do script Google da empresa.
+   Content-Type text/plain evita o pedido preflight, que o Apps Script não responde. */
+async function enviarPeloScript(dados){
+  const r = await fetch(cfg.url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({token:cfg.token}, dados))
+  });
+  if(!r.ok) throw new Error('o servidor respondeu '+r.status);
+  let res;
+  try{ res = JSON.parse(await r.text()); }
+  catch(e){ throw new Error('resposta inesperada do servidor'); }
+  if(!res.ok) throw new Error(res.erro==='nao autorizado'
+      ? 'acesso recusado pelo script (token diferente)' : (res.erro||'erro desconhecido'));
+  return res;
+}
+function abrirNoEmail(){
+  const d=recolher(), erro=validar(d);
+  if(erro){ aviso('⚠ '+erro,'err'); return; }
+  const url='mailto:'+encodeURIComponent(cfg.para)+
+    '?subject='+encodeURIComponent(assunto(d))+
+    (cfg.cc?'&cc='+encodeURIComponent(cfg.cc):'')+
+    '&body='+encodeURIComponent(corpoTexto(d));
+  guardarSugestoes(d);
+  aviso('✉ A abrir a app de email com a encomenda preenchida. Confirme o envio nela.','ok');
+  window.location.href=url;
+}
+
+/* ─────────────── sugestões e histórico ─────────────── */
+function guardarSugestoes(d){
+  d.itens.forEach(i=>{ if(i.nome && !DADOS.produtos.includes(i.nome)) DADOS.produtos.unshift(i.nome); });
+  DADOS.produtos = DADOS.produtos.slice(0,150);
+  guardarDados(); desenharDatalists();
+}
+function desenharDatalists(){
+  document.getElementById('produtos').innerHTML = DADOS.produtos.map(v=>'<option value="'+esc(v)+'">').join('');
+}
+function guardarHistorico(d){
+  DADOS.historico.unshift({ref:d.ref,data:d.data,linhas:d.itens.length,
+    unidades:d.itens.reduce((s,i)=>s+i.qtd,0),itens:d.itens});
+  DADOS.historico = DADOS.historico.slice(0,25);
+  guardarDados(); renderHistorico();
+}
+function renderHistorico(){
+  const h=DADOS.historico, el=document.getElementById('hist');
+  if(!h.length){ el.innerHTML='<p class="vazio">Ainda não enviou nenhuma encomenda.</p>'; return; }
+  el.innerHTML=h.slice(0,8).map((x,i)=>
+    '<div class="hist-item"><span><b>'+esc(x.ref)+'</b><br><span class="dt">'+dataPT(x.data)+' · '+
+    x.linhas+' produto(s) · '+x.unidades+' un.</span></span>'+
+    '<button class="rep" type="button" onclick="repetir('+i+')">Repetir</button></div>').join('');
+}
+function repetir(i){
+  const x=DADOS.historico[i]; if(!x) return;
+  document.getElementById('linhas').innerHTML='';
+  x.itens.forEach(it=>addLinha(it.nome, it.tamanho==='—'?'':it.tamanho, it.qtd));
+  window.scrollTo({top:0,behavior:'smooth'});
+  aviso('Produtos da encomenda '+esc(x.ref)+' copiados. Reveja antes de enviar.','warn');
+}
+
+/* ─────────────── nova encomenda ─────────────── */
+function novaEncomenda(){
+  document.getElementById('linhas').innerHTML=''; addLinha();
+  document.getElementById('fObs').value='';
+  document.getElementById('fData').value=iso(new Date());
+  atualizarRef();
+  DADOS.rascunho=null; guardarDados();
+  document.getElementById('msg').className='msg';
+  atualizarPreview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function restaurar(d){
+  if(d.data){ document.getElementById('fData').value=d.data; atualizarRef(); }
+  document.getElementById('fObs').value=d.obs||'';
+  if(d.itens && d.itens.length) d.itens.forEach(i=>addLinha(i.nome,i.tamanho==='—'?'':i.tamanho,i.qtd));
+  else addLinha();
+}
+
+/* ─────────────── definições ─────────────── */
+function abrirConfig(){
+  if(!TEM_COFRE){
+    document.getElementById('cUrl').value=cfg.url;
+    document.getElementById('cToken').value=cfg.token;
+    document.getElementById('cPara').value=cfg.para;
+    document.getElementById('cCc').value=cfg.cc;
+  } else {
+    document.getElementById('cParaRO').value=cfg.para;
+  }
+  document.getElementById('msgCfg').className='msg';
+  document.getElementById('overlay').classList.add('show');
+}
+function fecharConfig(){ document.getElementById('overlay').classList.remove('show'); }
+function guardarConfig(){
+  if(TEM_COFRE){ fecharConfig(); return; }
+  cfg={
+    url:document.getElementById('cUrl').value.trim(),
+    token:document.getElementById('cToken').value.trim(),
+    para:document.getElementById('cPara').value.trim()||'logistica@sulfrio.pt',
+    cc:document.getElementById('cCc').value.trim()
+  };
+  gravar(K_CFG,cfg);
+  atualizarAvisoConfig(); atualizarPreview();
+  document.getElementById('subTopo').textContent='para '+cfg.para;
+  const m=document.getElementById('msgCfg');
+  m.className='msg show ok'; m.textContent='✓ Guardado.';
+}
+async function testarConfig(){
+  guardarConfig();
+  const m=document.getElementById('msgCfg');
+  if(!cfg.url||!cfg.token){
+    m.className='msg show err'; m.textContent='Falta o endereço do script ou o token.'; return;
+  }
+  m.className='msg show warn'; m.textContent='A testar a ligação…';
+  try{
+    await enviarPeloScript({teste:true});
+    m.className='msg show ok'; m.textContent='✓ Ligação correta. Foi enviado um email de teste para '+REMETENTE+'.';
+  }catch(e){ m.className='msg show err'; m.textContent='✗ Falhou: '+e.message; }
+}
+function atualizarAvisoConfig(){
+  const pronto=!!(cfg.url&&cfg.token);
+  document.getElementById('cardAviso').style.display=pronto?'none':'block';
+  const b=document.getElementById('badgeCfg');
+  b.className='badge '+(pronto?'on':'off');
+  b.textContent=pronto?'ativo':'por configurar';
+  document.getElementById('blocoEnvio').style.display = TEM_COFRE?'none':'block';
+  document.getElementById('blocoDestino').style.display = TEM_COFRE?'block':'none';
+  document.getElementById('notaCofre').style.display    = TEM_COFRE?'block':'none';
+  document.getElementById('btnSair').style.display      = TEM_COFRE?'block':'none';
+  document.getElementById('btnGuardarCfg').style.display= TEM_COFRE?'none':'block';
+}
+document.getElementById('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') fecharConfig(); });
+
+/* ─────────────── instalação e atualizações ─────────────── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{
+        const novo=reg.installing;
+        novo && novo.addEventListener('statechange',()=>{
+          if(novo.state==='installed' && navigator.serviceWorker.controller){
+            aviso('↻ Nova versão disponível. <a href="#" onclick="location.reload();return false;"><b>Atualizar</b></a>','warn');
+          }
+        });
+      });
+    }).catch(()=>{});
+  });
+}
+let promptInstalar=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); promptInstalar=e;
+  const b=document.getElementById('btnInstalar'); if(b) b.style.display='block';
+});
+function instalar(){
+  if(!promptInstalar) return;
+  promptInstalar.prompt();
+  promptInstalar.userChoice.finally(()=>{
+    promptInstalar=null;
+    document.getElementById('btnInstalar').style.display='none';
+  });
+}
+window.addEventListener('appinstalled',()=>{
+  const b=document.getElementById('btnInstalar'); if(b) b.style.display='none';
+});
+
+arrancar();
+</script>
+</body>
+</html>
