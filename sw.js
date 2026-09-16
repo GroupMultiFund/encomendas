@@ -1,9 +1,9 @@
 /* Encomendas — service worker
    Guarda a app no telemóvel para abrir sem rede e atualiza-se sozinho. */
-const VERSAO = 'v2026.09.16';
+const VERSAO = 'v2026.09.16b';
 const CACHE  = 'encomendas-' + VERSAO;
 const FICHEIROS = [
-  './', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png'
+  './', './index.html', './cofre.js', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', e => {
@@ -30,7 +30,7 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;        // EmailJS nunca é servido da cache
 
   // a página: rede primeiro (para apanhar versões novas), cache se estiver offline
-  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
+  if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/cofre.js')) {
     e.respondWith(
       fetch(req).then(r => {
         const copia = r.clone();

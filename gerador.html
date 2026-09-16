@@ -80,7 +80,7 @@ textarea#saida{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 <div class="card">
   <h2>Token do script</h2>
   <p style="font-size:13.5px;color:var(--muted);margin:0 0 12px">
-    Gere um token, cole-o no <b>Codigo.gs</b> do Google Apps Script e deixe-o também aqui.
+    Gere um token e guarde-o no Apps Script em <b>Definições do projeto → Propriedades do script → TOKEN</b>, deixando-o também aqui.
     É ele que impede que outra pessoa use o script.
   </p>
   <div class="campo">
@@ -107,7 +107,7 @@ textarea#saida{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 <div class="card" id="cardSaida" style="display:none">
   <h2>Bloco a enviar</h2>
   <p style="font-size:13.5px;color:var(--muted);margin:0 0 12px">
-    Este bloco é ilegível sem a password. Pode enviá-lo com segurança para ser colocado na aplicação.
+    Este bloco é ilegível sem a password. É o conteúdo do ficheiro <b>cofre.js</b> da aplicação — pode enviá-lo com segurança.
   </p>
   <textarea id="saida" readonly></textarea>
   <button class="btn btn-alt" onclick="copiar()">Copiar</button>

@@ -302,26 +302,23 @@ pre.prev{background:#0f2537;color:#dbe9f4;padding:14px;border-radius:11px;font-s
   </div>
 </div>
 
+<script src="cofre.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    Encomendas — Sábio Crescimento / Group Multifund
 
-   COFRE: o endereço do script de envio, o seu token e o destinatário
-   ficam aqui cifrados com AES-GCM 256. A chave é derivada do utilizador + password
-   com PBKDF2-SHA256. Nem a password nem os códigos existem em claro
-   nesta página — sem as credenciais corretas o bloco é indecifrável.
+   O cofre (endereço do script de envio, token e destinatário) vive no
+   ficheiro cofre.js, cifrado com AES-GCM 256. A chave é derivada do
+   utilizador + password com PBKDF2-SHA256. Nem a password nem os dados
+   existem em claro — sem as credenciais corretas é indecifrável.
 
-   Para gerar este bloco use a página "gerador.html" e cole aqui o
-   resultado. Nunca escreva a password neste ficheiro.
+   Para trocar as credenciais basta substituir o cofre.js pelo bloco
+   produzido em gerador.html. Nunca escreva a password em ficheiro nenhum.
    ═══════════════════════════════════════════════════════════════════════ */
-const COFRE = {
-  v    : 1,
-  iter : 310000,
-  salt : '',   // base64
-  iv   : '',   // base64
-  dados: ''    // base64 — {url, token, para, cc} cifrado
-};
-const TEM_COFRE = !!(COFRE.salt && COFRE.iv && COFRE.dados);
+const CFR = (typeof COFRE !== 'undefined' && COFRE)
+  ? COFRE
+  : { v:1, iter:310000, salt:'', iv:'', dados:'' };
+const TEM_COFRE = !!(CFR.salt && CFR.iv && CFR.dados);
 
 const VERSAO    = '2026.09.16';
 const REMETENTE = 'logistica@groupmultifund.pt';
@@ -380,7 +377,7 @@ async function arrancar(){
     try{
       const chave = await crypto.subtle.importKey('raw', deb64(guardada),
         {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
-      cfg = Object.assign(cfg, await decifrar(chave, COFRE.iv, COFRE.dados));
+      cfg = Object.assign(cfg, await decifrar(chave, CFR.iv, CFR.dados));
       CHAVE = chave;
       await carregarDados();
       abrirApp();
@@ -406,8 +403,8 @@ async function entrar(ev){
   msgLogin('A decifrar as credenciais…','warn');
   await new Promise(r=>setTimeout(r,40));
   try{
-    const chave = await derivarChave(u, p, deb64(COFRE.salt), COFRE.iter);
-    const conf  = await decifrar(chave, COFRE.iv, COFRE.dados);   // falha se estiver errado
+    const chave = await derivarChave(u, p, deb64(CFR.salt), CFR.iter);
+    const conf  = await decifrar(chave, CFR.iv, CFR.dados);   // falha se estiver errado
     CHAVE = chave;
     cfg = Object.assign(cfg, conf);
     if(document.getElementById('lManter').checked){
