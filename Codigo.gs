@@ -9,7 +9,7 @@
  * O stock vive também aqui, nas propriedades do script, para que todos os
  * telemóveis vejam o mesmo número. Cada encomenda enviada abate as
  * quantidades; às segundas-feiras repõe-se com o ficheiro do armazém
- * (função reporStock, no fim deste ficheiro).
+ * (função reporStock, no fim deste ficheiro, ou pela ação "repor" da app).
  *
  * ── Instalação (uma vez) ─────────────────────────────────────────────
  *  1. script.google.com → Novo projeto → colar este código
@@ -41,6 +41,15 @@ function doPost(e) {
 
     // ---- consultar o stock ----
     if (d.accao === 'stock') return resposta({ ok: true, stock: lerStock() });
+
+    // ---- repor o stock a partir do ficheiro do armazém ----
+    if (d.accao === 'repor') {
+      if (!d.stock || !d.stock.itens || !d.stock.itens.length) {
+        return resposta({ ok: false, erro: 'stock vazio' });
+      }
+      gravarStock({ atualizado: d.stock.atualizado || '', itens: d.stock.itens });
+      return resposta({ ok: true, stock: lerStock() });
+    }
 
     // ---- teste de ligação: envia para a própria caixa, nunca para o fornecedor ----
     if (d.teste) {
