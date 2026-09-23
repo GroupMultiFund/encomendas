@@ -91,6 +91,31 @@ textarea{resize:vertical;min-height:76px}
 .resumo{display:flex;justify-content:space-between;background:var(--brand-soft);border-radius:11px;
   padding:12px 14px;font-size:14px;font-weight:700;color:var(--brand-dark);margin-top:12px}
 
+/* ---------- Stock ---------- */
+.stock-topo{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.stock-topo h2{margin:0}
+.btn-ref{border:1px solid var(--line);background:#fff;color:var(--brand-dark);border-radius:9px;
+  padding:6px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-ref:active{background:var(--brand-soft)}
+table.stock{width:100%;border-collapse:collapse;font-size:14px}
+table.stock th{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+  text-align:left;padding:0 0 8px;font-weight:700}
+table.stock th:last-child,table.stock td:last-child{text-align:right}
+table.stock td{padding:10px 0;border-top:1px solid var(--line)}
+table.stock .art{color:var(--muted);font-size:12px;display:block}
+table.stock .qt{font-weight:800;font-size:16px}
+table.stock tr.esgotado .qt{color:var(--err)}
+table.stock tr.baixo .qt{color:var(--warn)}
+.stock-pedido{color:var(--brand);font-weight:700;font-size:12px;display:block}
+.stock-data{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0}
+.p-aviso{font-size:12.5px;font-weight:700;color:var(--err);margin-top:8px;display:none}
+.p-aviso.show{display:block}
+select{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;font-size:16px;
+  font-family:inherit;color:var(--ink);background:#fff;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b7288'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:22px;padding-right:38px}
+select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
 /* ---------- Pré-visualização ---------- */
 details.prev-wrap summary{list-style:none;cursor:pointer;font-size:12.5px;text-transform:uppercase;
   letter-spacing:1px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between;align-items:center}
@@ -221,6 +246,18 @@ pre.prev{background:#0f2537;color:#dbe9f4;padding:14px;border-radius:11px;font-s
       </div>
     </div>
 
+    <div class="card" id="cardStock" style="display:none">
+      <div class="stock-topo">
+        <h2>Stock disponível <span class="stock-data" id="stockData"></span></h2>
+        <button class="btn-ref" type="button" onclick="carregarStock(true)">↻ Atualizar</button>
+      </div>
+      <table class="stock">
+        <thead><tr><th>Produto</th><th>Disponível</th></tr></thead>
+        <tbody id="tabStock"></tbody>
+      </table>
+      <p class="hint" id="stockNota"></p>
+    </div>
+
     <div class="card">
       <h2>Produtos</h2>
       <div id="linhas"></div>
@@ -230,7 +267,7 @@ pre.prev{background:#0f2537;color:#dbe9f4;padding:14px;border-radius:11px;font-s
         <span id="rLinhas">0 produtos</span>
         <span id="rUnid">0 unidades</span>
       </div>
-      <p class="hint">Os produtos que for usando ficam guardados como sugestões. O tamanho é escrito livremente.</p>
+      <p class="hint">Escolha o artigo da lista para o stock ser abatido, ou “Outro produto” para escrever à mão.</p>
     </div>
 
     <div class="card">
@@ -320,7 +357,7 @@ const CFR = (typeof COFRE !== 'undefined' && COFRE)
   : { v:1, iter:310000, salt:'', iv:'', dados:'' };
 const TEM_COFRE = !!(CFR.salt && CFR.iv && CFR.dados);
 
-const VERSAO    = '2026.09.16';
+const VERSAO    = '2026.09.23';
 const REMETENTE = 'logistica@groupmultifund.pt';
 const K_CHAVE   = 'sulfrio.chave';    // chave de sessão (se "manter ligado")
 const K_DADOS   = 'sulfrio.dados';    // dados locais (cifrados quando há cofre)
@@ -329,6 +366,7 @@ const K_CFG     = 'sulfrio.config';   // só usado quando não há cofre
 let CHAVE = null;                     // CryptoKey em memória
 let cfg   = {url:'', token:'', para:'logistica@sulfrio.pt', cc:''};
 let DADOS = {contadores:{}, produtos:[], historico:[], rascunho:null};
+let STOCK = { atualizado:'', itens:[] };   // partilhado, vem do script Google
 
 /* ─────────────── utilitários ─────────────── */
 const enc = new TextEncoder(), dec = new TextDecoder();
@@ -473,6 +511,7 @@ function iniciar(){
   ['input','change'].forEach(ev =>
     document.getElementById('fData').addEventListener(ev, ()=>{ atualizarRef(); aoAlterar(); }));
   atualizarPreview();
+  carregarStock(false);
 }
 
 function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -492,12 +531,28 @@ function consumirRef(){
 }
 
 /* ─────────────── linhas ─────────────── */
-function addLinha(prod,tam,qtd){
+function opcoesArtigo(sel){
+  let o = '<option value="">— escolher da lista —</option>';
+  STOCK.itens.forEach(i=>{
+    o += '<option value="'+esc(i.artigo)+'"'+(String(sel)===String(i.artigo)?' selected':'')+'>'+
+         esc(i.descricao)+'  ('+fmt(i.stock)+' disp.)</option>';
+  });
+  o += '<option value="outro"'+(sel==='outro'?' selected':'')+'>Outro produto (escrever)</option>';
+  return o;
+}
+
+function addLinha(prod,tam,qtd,artigo){
   const div=document.createElement('div');
   div.className='linha';
+  const temStock = STOCK.itens.length > 0;
+  const sel = artigo || (temStock && !prod ? '' : 'outro');
   div.innerHTML=
    '<div class="linha-cab"><span class="linha-n"></span>'+
      '<button class="del" type="button" onclick="delLinha(this)">Remover</button></div>'+
+   (temStock
+     ? '<div class="campo campo-art"><label>Artigo</label>'+
+         '<select class="p-art" onchange="escolherArtigo(this)">'+opcoesArtigo(sel)+'</select></div>'
+     : '')+
    '<div class="campo"><label>Nome do produto</label>'+
      '<input class="p-nome" type="text" list="produtos" placeholder="Ex.: Filete de pescada" value="'+esc(prod||'')+'"></div>'+
    '<div class="dupla">'+
@@ -509,10 +564,36 @@ function addLinha(prod,tam,qtd){
          '<input class="p-qtd" type="number" inputmode="numeric" min="1" step="1" value="'+(qtd||1)+'">'+
          '<button class="qtd-btn" type="button" onclick="passo(this,1)" tabindex="-1">+</button>'+
        '</div></div>'+
-   '</div>';
+   '</div>'+
+   '<div class="p-aviso"></div>';
   document.getElementById('linhas').appendChild(div);
   div.querySelectorAll('input').forEach(el=>el.addEventListener('input',aoAlterar));
+  if(temStock && artigo) bloquearCampos(div, true);
   numerar(); aoAlterar();
+}
+
+/* Ao escolher um artigo da lista, o nome e o tamanho vêm do stock. */
+function escolherArtigo(sel){
+  const linha = sel.closest('.linha');
+  const nome  = linha.querySelector('.p-nome');
+  const tam   = linha.querySelector('.p-tam');
+  const item  = STOCK.itens.find(i=>String(i.artigo)===sel.value);
+  if(item){
+    nome.value = item.produto || item.descricao;
+    tam.value  = item.tamanho || '';
+    bloquearCampos(linha, true);
+  } else {
+    if(sel.value==='outro'){ nome.value=''; tam.value=''; }
+    bloquearCampos(linha, false);
+    if(sel.value==='outro') nome.focus();
+  }
+  aoAlterar();
+}
+function bloquearCampos(linha, bloquear){
+  ['.p-nome','.p-tam'].forEach(q=>{
+    const el = linha.querySelector(q);
+    if(bloquear) el.setAttribute('readonly','readonly'); else el.removeAttribute('readonly');
+  });
 }
 function delLinha(btn){ btn.closest('.linha').remove(); numerar(); aoAlterar(); }
 function passo(btn,d){
@@ -535,7 +616,9 @@ function recolher(){
     const nome=l.querySelector('.p-nome').value.trim();
     const tam=l.querySelector('.p-tam').value.trim();
     const qtd=parseInt(l.querySelector('.p-qtd').value,10);
-    if(nome) itens.push({nome,tamanho:tam||'—',qtd:(qtd>0?qtd:1)});
+    const sel=l.querySelector('.p-art');
+    const art=(sel && sel.value && sel.value!=='outro') ? sel.value : '';
+    if(nome) itens.push({nome,tamanho:tam||'—',qtd:(qtd>0?qtd:1),artigo:art});
   });
   return {
     ref:document.getElementById('fRef').value,
@@ -559,7 +642,7 @@ function corpoTexto(d){
   L.push('PRODUTOS');
   L.push('--------------------------------------------------');
   d.itens.forEach((i,n)=>{
-    L.push((n+1)+'. '+i.nome);
+    L.push((n+1)+'. '+i.nome+(i.artigo?'   (artigo '+i.artigo+')':''));
     L.push('   Tamanho: '+i.tamanho+'   |   Quantidade: '+i.qtd);
   });
   L.push('--------------------------------------------------');
@@ -578,16 +661,116 @@ function corpoHTML(d){
   h+='<tr><td style="color:#5b7288">Referência</td><td><b>'+esc(d.ref)+'</b></td></tr>';
   h+='<tr><td style="color:#5b7288">Data</td><td><b>'+dataPT(d.data)+'</b></td></tr></table>';
   h+='<table cellpadding="8" style="border-collapse:collapse;width:100%;font-size:13px;border:1px solid #d8e3ee">';
-  h+='<tr style="background:#0b6bb5;color:#fff"><th align="left">Produto</th><th align="left">Tamanho</th><th align="right">Qtd.</th></tr>';
+  h+='<tr style="background:#0b6bb5;color:#fff"><th align="left">Artigo</th><th align="left">Produto</th><th align="left">Tamanho</th><th align="right">Qtd.</th></tr>';
   d.itens.forEach((i,n)=>{
-    h+='<tr style="background:'+(n%2?'#f6fafd':'#fff')+';border-top:1px solid #d8e3ee"><td>'+esc(i.nome)+
-       '</td><td>'+esc(i.tamanho)+'</td><td align="right"><b>'+i.qtd+'</b></td></tr>';
+    h+='<tr style="background:'+(n%2?'#f6fafd':'#fff')+';border-top:1px solid #d8e3ee"><td>'+esc(i.artigo||'—')+
+       '</td><td>'+esc(i.nome)+'</td><td>'+esc(i.tamanho)+'</td><td align="right"><b>'+i.qtd+'</b></td></tr>';
   });
-  h+='<tr style="background:#e6f1fa"><td colspan="2" align="right"><b>Total de unidades</b></td><td align="right"><b>'+
+  h+='<tr style="background:#e6f1fa"><td colspan="3" align="right"><b>Total de unidades</b></td><td align="right"><b>'+
      d.itens.reduce((s,i)=>s+i.qtd,0)+'</b></td></tr></table>';
   if(d.obs) h+='<p><b>Observações:</b><br>'+esc(d.obs).replace(/\n/g,'<br>')+'</p>';
   h+='<p>Com os melhores cumprimentos,<br>Logística — Group Multifund<br>'+REMETENTE+'</p></div>';
   return h;
+}
+
+/* ─────────────── stock partilhado ─────────────── */
+function fmt(n){
+  const v = Number(n);
+  return (Math.round(v*1000)/1000).toLocaleString('pt-PT');
+}
+
+async function carregarStock(manual){
+  if(!cfg.url || !cfg.token) return;
+  const nota = document.getElementById('stockNota');
+  if(manual) nota.textContent = 'A atualizar…';
+  try{
+    const r = await enviarPeloScript({accao:'stock'});
+    if(r.stock) { STOCK = r.stock; renderStock(); refazerSeletores(); }
+    if(manual) nota.textContent = notaStock();
+  }catch(e){
+    nota.textContent = manual ? 'Não foi possível atualizar o stock: '+e.message : '';
+  }
+}
+
+function notaStock(){
+  if(!STOCK.itens.length) return '';
+  let t = 'Valores do ficheiro do armazém';
+  if(STOCK.atualizado) t += ' de '+dataPT(STOCK.atualizado);
+  t += '. Cada encomenda enviada abate destas quantidades.';
+  return t;
+}
+
+/** Quantidade já pedida nesta encomenda, por artigo. */
+function pedidoPorArtigo(){
+  const p={};
+  document.querySelectorAll('.linha').forEach(l=>{
+    const sel=l.querySelector('.p-art');
+    if(!sel || !sel.value || sel.value==='outro') return;
+    if(!l.querySelector('.p-nome').value.trim()) return;
+    const q=parseInt(l.querySelector('.p-qtd').value,10)||0;
+    p[sel.value]=(p[sel.value]||0)+q;
+  });
+  return p;
+}
+
+function renderStock(){
+  const card=document.getElementById('cardStock');
+  if(!STOCK.itens.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  document.getElementById('stockData').textContent =
+    STOCK.atualizado ? '· '+dataPT(STOCK.atualizado) : '';
+
+  const pedido=pedidoPorArtigo();
+  document.getElementById('tabStock').innerHTML = STOCK.itens.map(i=>{
+    const pedida = pedido[String(i.artigo)]||0;
+    const resta  = Number(i.stock)-pedida;
+    const classe = resta<0 ? 'esgotado' : (resta<=5 ? 'baixo' : '');
+    return '<tr class="'+classe+'">'+
+      '<td>'+esc(i.descricao)+'<span class="art">Artigo '+esc(i.artigo)+'</span></td>'+
+      '<td><span class="qt">'+fmt(i.stock)+'</span>'+
+        (pedida ? '<span class="stock-pedido">− '+fmt(pedida)+' nesta encomenda = '+fmt(resta)+'</span>' : '')+
+      '</td></tr>';
+  }).join('');
+  document.getElementById('stockNota').textContent = notaStock();
+}
+
+/** Repõe as opções dos seletores quando o stock muda.
+    Se as linhas foram criadas antes de o stock chegar, reconstrói-as. */
+function refazerSeletores(){
+  const temStock = STOCK.itens.length > 0;
+  const temSeletor = !!document.querySelector('.linha .p-art');
+  if(temStock !== temSeletor){
+    const d = recolher();
+    document.getElementById('linhas').innerHTML = '';
+    if(d.itens.length) d.itens.forEach(i=>addLinha(i.nome, i.tamanho==='—'?'':i.tamanho, i.qtd, i.artigo||''));
+    else addLinha();
+    return;
+  }
+  document.querySelectorAll('.linha').forEach(l=>{
+    const sel=l.querySelector('.p-art');
+    if(sel) sel.innerHTML = opcoesArtigo(sel.value);
+  });
+}
+
+/** Marca a vermelho as linhas que pedem mais do que existe. */
+function verificarExcesso(){
+  const pedido=pedidoPorArtigo();
+  const excesso=[];
+  STOCK.itens.forEach(i=>{
+    const p=pedido[String(i.artigo)]||0;
+    if(p>Number(i.stock)) excesso.push({descricao:i.descricao,pedido:p,disponivel:Number(i.stock)});
+  });
+  document.querySelectorAll('.linha').forEach(l=>{
+    const sel=l.querySelector('.p-art'), av=l.querySelector('.p-aviso');
+    if(!sel || !av) return;
+    const item=STOCK.itens.find(i=>String(i.artigo)===sel.value);
+    const q=parseInt(l.querySelector('.p-qtd').value,10)||0;
+    if(item && q>Number(item.stock)){
+      av.textContent='⚠ Só há '+fmt(item.stock)+' em stock deste artigo.';
+      av.classList.add('show');
+    } else { av.classList.remove('show'); }
+  });
+  return excesso;
 }
 
 /* ─────────────── pré-visualização ─────────────── */
@@ -599,6 +782,7 @@ function aoAlterar(){
 function atualizarPreview(){
   const d=recolher();
   const un=d.itens.reduce((s,i)=>s+i.qtd,0);
+  if(STOCK.itens.length){ renderStock(); verificarExcesso(); }
   document.getElementById('rLinhas').textContent=d.itens.length+(d.itens.length===1?' produto':' produtos');
   document.getElementById('rUnid').textContent=un+(un===1?' unidade':' unidades');
   document.getElementById('prev').textContent = d.itens.length
@@ -624,16 +808,24 @@ async function enviar(){
     aviso('⚙ Envio automático por configurar. Use o botão ✉ ou configure em ⚙.','warn');
     abrirConfig(); return;
   }
+  const ex = STOCK.itens.length ? verificarExcesso() : [];
+  if(ex.length){
+    const lista = ex.map(x=>x.descricao+' (pede '+fmt(x.pedido)+', há '+fmt(x.disponivel)+')').join('; ');
+    if(!confirm('Está a encomendar mais do que o stock disponível:\n\n'+lista+'\n\nEnviar mesmo assim?')) return;
+  }
   const btn=document.getElementById('btnEnviar');
   btn.disabled=true; btn.textContent='A enviar…';
   try{
-    await enviarPeloScript({
+    const res = await enviarPeloScript({
       referencia: d.ref,
       assunto: assunto(d),
       texto: corpoTexto(d),
-      html: corpoHTML(d)
+      html: corpoHTML(d),
+      linhas: d.itens.filter(i=>i.artigo).map(i=>({artigo:i.artigo, qtd:i.qtd}))
     });
-    aviso('✓ Encomenda <b>'+esc(d.ref)+'</b> enviada para '+esc(cfg.para)+'.','ok');
+    if(res.stock){ STOCK = res.stock; renderStock(); refazerSeletores(); }
+    aviso('✓ Encomenda <b>'+esc(d.ref)+'</b> enviada para '+esc(cfg.para)+'.'+
+          (res.stock ? ' Stock atualizado.' : ''),'ok');
     guardarSugestoes(d); guardarHistorico(d); consumirRef();
     DADOS.rascunho=null; guardarDados();
     setTimeout(novaEncomenda,1400);
@@ -697,7 +889,7 @@ function renderHistorico(){
 function repetir(i){
   const x=DADOS.historico[i]; if(!x) return;
   document.getElementById('linhas').innerHTML='';
-  x.itens.forEach(it=>addLinha(it.nome, it.tamanho==='—'?'':it.tamanho, it.qtd));
+  x.itens.forEach(it=>addLinha(it.nome, it.tamanho==='—'?'':it.tamanho, it.qtd, it.artigo||''));
   window.scrollTo({top:0,behavior:'smooth'});
   aviso('Produtos da encomenda '+esc(x.ref)+' copiados. Reveja antes de enviar.','warn');
 }
@@ -716,7 +908,7 @@ function novaEncomenda(){
 function restaurar(d){
   if(d.data){ document.getElementById('fData').value=d.data; atualizarRef(); }
   document.getElementById('fObs').value=d.obs||'';
-  if(d.itens && d.itens.length) d.itens.forEach(i=>addLinha(i.nome,i.tamanho==='—'?'':i.tamanho,i.qtd));
+  if(d.itens && d.itens.length) d.itens.forEach(i=>addLinha(i.nome,i.tamanho==='—'?'':i.tamanho,i.qtd,i.artigo||''));
   else addLinha();
 }
 

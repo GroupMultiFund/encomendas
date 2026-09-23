@@ -39,6 +39,23 @@ Se limpar tudo no telemóvel, nada se perde — basta abrir o endereço outra ve
 - Em ⚙ há **Email de teste** (envia para a própria caixa, nunca para o fornecedor) e
   **Terminar sessão**.
 
+## Stock
+
+A app mostra o stock disponível por artigo, vindo do ficheiro do armazém. Os números estão
+guardados no script Google, por isso são os mesmos em todos os telemóveis.
+
+- Escolher o **artigo** na lista preenche o produto e o tamanho e liga a linha ao stock.
+- *Outro produto (escrever)* permite encomendar algo que não esteja na lista — nesse caso não há
+  abate, como é natural.
+- A tabela mostra em tempo real quanto fica depois da encomenda em curso.
+- Pedir mais do que existe é permitido: a linha fica marcada a vermelho e é pedida confirmação
+  antes de enviar. O stock pode ficar negativo, e isso fica visível.
+- O email para o fornecedor passa a incluir o código de artigo de cada linha.
+
+**Atualização semanal:** o ficheiro do armazém é enviado ao Claude, que atualiza a função
+`reporStock()` no Apps Script e a corre. Não é preciso reimplementar nada — os telemóveis
+apanham os valores novos na abertura seguinte, ou tocando em **↻ Atualizar**.
+
 ## Segurança
 
 - Login com utilizador e password no arranque.

@@ -1,6 +1,6 @@
 /* Encomendas — service worker
    Guarda a app no telemóvel para abrir sem rede e atualiza-se sozinho. */
-const VERSAO = 'v2026.09.16b';
+const VERSAO = 'v2026.09.23';
 const CACHE  = 'encomendas-' + VERSAO;
 const FICHEIROS = [
   './', './index.html', './cofre.js', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png'
