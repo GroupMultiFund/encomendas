@@ -48,6 +48,7 @@ function doPost(e) {
         return resposta({ ok: false, erro: 'stock vazio' });
       }
       gravarStock({ atualizado: d.stock.atualizado || '', itens: d.stock.itens });
+      try { registar_(eventoReposicao_()); } catch (errReg) {}
       return resposta({ ok: true, stock: lerStock() });
     }
 
@@ -78,6 +79,8 @@ function doPost(e) {
     MailApp.sendEmail(opcoes);
 
     const stock = abater(d.linhas);   // só depois de o email seguir
+    // regista a encomenda para o dashboard; nunca pode estragar uma encomenda que ja seguiu
+    try { registar_(eventoEncomenda_(d)); } catch (errReg) {}
     return resposta({ ok: true, referencia: d.referencia || '', stock: stock });
 
   } catch (err) {
@@ -86,7 +89,9 @@ function doPost(e) {
 }
 
 /** Permite confirmar no browser que o script está no ar. */
-function doGet() {
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.o === 'stock') return leituraDashboard_(p);   // porta so de leitura do dashboard
   return resposta({ ok: true, servico: 'encomendas', restantes: MailApp.getRemainingDailyQuota() });
 }
 
@@ -151,6 +156,7 @@ function reporStock() {
       { artigo: '319', descricao: 'Choco Mongo 4 Cx', produto: 'Choco Mongo', tamanho: '4 Cx', stock: 695 }
     ]
   });
+  try { registar_(eventoReposicao_()); } catch (errReg) {}
   Logger.log('Stock reposto: ' + P.getProperty('STOCK'));
 }
 
@@ -175,4 +181,89 @@ function testarEnvio() {
     body: 'Se recebeu este email, o script está a funcionar.',
     name: NOME
   });
+}
+
+// ═══════════════ REGISTO E LEITURA PELO DASHBOARD (01-10-2026) ═══════════════
+/* Cada encomenda enviada e cada reposicao ficam registadas por mes nas
+   propriedades do script (REG_aaaa-mm, e REG_aaaa-mm_2, _3... quando uma enche:
+   cada propriedade aguenta cerca de 9 KB). Nao precisa de folha de calculo nem
+   de autorizacoes novas. O dashboard le o stock e estes movimentos pela porta
+   ?o=stock, com um codigo proprio (CODIGO_DASHBOARD) que so serve para ler:
+   quem o tiver nao consegue enviar encomendas, isso continua a exigir o TOKEN. */
+
+function agora_() {
+  return Utilities.formatDate(new Date(), 'Europe/Lisbon', 'yyyy-MM-dd HH:mm');
+}
+
+function eventoEncomenda_(d) {
+  const m = String(d.assunto || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  const texto = String(d.texto || '');
+  const i = texto.indexOf('OBSERVAÇÕES\n');
+  const obs = i < 0 ? '' : texto.slice(i + 12).split('\n\n')[0].replace(/\s+/g, ' ').trim().slice(0, 80);
+  const l = (d.linhas || [])
+    .filter(function (x) { return x && x.artigo && Number(x.qtd) > 0; })
+    .map(function (x) { return [String(x.artigo), Number(x.qtd)]; });
+  return { t: agora_(), tipo: 'enc', ref: String(d.referencia || ''),
+           para: m ? m[3] + '-' + m[2] + '-' + m[1] : '', obs: obs, l: l };
+}
+
+function eventoReposicao_() {
+  const s = lerStock();
+  return { t: agora_(), tipo: 'rep', ref: String(s.atualizado || ''),
+           s: (s.itens || []).map(function (x) { return [String(x.artigo), Number(x.stock)]; }) };
+}
+
+function registar_(ev) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const mes = ev.t.slice(0, 7);
+    for (let n = 1; n < 50; n++) {
+      const chave = 'REG_' + mes + (n > 1 ? '_' + n : '');
+      const bruto = P.getProperty(chave);
+      const lista = bruto ? JSON.parse(bruto) : [];
+      lista.push(ev);
+      const txt = JSON.stringify(lista);
+      if (txt.length < 8500 || lista.length === 1) { P.setProperty(chave, txt); return; }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Movimentos dos ultimos meses, por ordem de data. */
+function movimentos_(meses) {
+  const hoje = new Date();
+  const desde = Utilities.formatDate(new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1), 1), 'Europe/Lisbon', 'yyyy-MM');
+  const todas = P.getProperties();
+  let out = [];
+  Object.keys(todas)
+    .filter(function (k) { return k.indexOf('REG_') === 0 && k.slice(4, 11) >= desde; })
+    .sort()
+    .forEach(function (k) { try { out = out.concat(JSON.parse(todas[k])); } catch (err) {} });
+  out.sort(function (a, b) { return a.t < b.t ? -1 : (a.t > b.t ? 1 : 0); });
+  return out;
+}
+
+/* ?o=stock&codigo=XXXX[&cb=nome]  ->  stock actual e movimentos dos ultimos 3 meses.
+   JSONP quando vem cb, porque o dashboard vive noutro dominio. */
+function leituraDashboard_(p) {
+  const guardado = P.getProperty('CODIGO_DASHBOARD');
+  let saida;
+  if (!guardado) saida = { ok: false, erro: 'porta por configurar' };
+  else if (String(p.codigo || '') !== guardado) saida = { ok: false, erro: 'codigo' };
+  else saida = { ok: true, stock: lerStock(), movimentos: movimentos_(3), lido: agora_() };
+  const cb = String(p.cb || '');
+  if (/^[A-Za-z_$][\w$]{0,60}$/.test(cb)) {
+    return ContentService.createTextOutput(cb + '(' + JSON.stringify(saida) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return resposta(saida);
+}
+
+/** Correr UMA vez no editor: cria o codigo so de leitura do dashboard e mostra-o no registo. */
+function criarCodigoDashboard() {
+  const v = Utilities.getUuid().replace(/-/g, '').toUpperCase().slice(0, 12);
+  P.setProperty('CODIGO_DASHBOARD', v);
+  Logger.log('Codigo do DASHBOARD: ' + v);
 }
