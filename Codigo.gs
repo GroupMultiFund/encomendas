@@ -25,7 +25,7 @@
 // ═══════════ CONFIGURAÇÃO ═══════════
 // O token não fica escrito aqui: está em Propriedades do script → TOKEN
 const DESTINO     = 'logistica@sulfrio.pt';   // fornecedor — fixo, a app não o pode alterar
-const CC          = '';                       // cópia interna (opcional)
+const CC          = 'lucassilva@groupmultifund.pt';   // cópia interna em todas as encomendas
 const NOME        = 'Logística — Group Multifund';
 const RESPONDER_A = 'logistica@groupmultifund.pt';
 // ════════════════════════════════════
@@ -40,7 +40,7 @@ function doPost(e) {
     if (!tokenValido(d.token)) return resposta({ ok: false, erro: 'nao autorizado' });
 
     // ---- consultar o stock ----
-    if (d.accao === 'stock') return resposta({ ok: true, stock: lerStock() });
+    if (d.accao === 'stock') return resposta({ ok: true, stock: lerStock(), destino: DESTINO, cc: CC });
 
     // ---- repor o stock a partir do ficheiro do armazém ----
     if (d.accao === 'repor') {

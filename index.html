@@ -357,7 +357,7 @@ const CFR = (typeof COFRE !== 'undefined' && COFRE)
   : { v:1, iter:310000, salt:'', iv:'', dados:'' };
 const TEM_COFRE = !!(CFR.salt && CFR.iv && CFR.dados);
 
-const VERSAO    = '2026.09.23';
+const VERSAO    = '2026.10.02';
 const REMETENTE = 'logistica@groupmultifund.pt';
 const K_CHAVE   = 'sulfrio.chave';    // chave de sessão (se "manter ligado")
 const K_DADOS   = 'sulfrio.dados';    // dados locais (cifrados quando há cofre)
@@ -686,6 +686,10 @@ async function carregarStock(manual){
   try{
     const r = await enviarPeloScript({accao:'stock'});
     if(r.stock) { STOCK = r.stock; renderStock(); refazerSeletores(); }
+    // o servidor é quem manda no destinatário e na cópia
+    if(r.destino){ cfg.para = r.destino; document.getElementById('subTopo').textContent = 'para '+cfg.para; }
+    if(r.cc !== undefined) cfg.cc = r.cc;
+    atualizarPreview();
     if(manual) nota.textContent = notaStock();
   }catch(e){
     nota.textContent = manual ? 'Não foi possível atualizar o stock: '+e.message : '';
